@@ -226,7 +226,7 @@ export default function TeacherHome() {
       <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased">
         <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-6 py-4 flex items-center justify-between">
           <h1 className="text-lg font-bold text-zinc-900">
-            금마 전자허가원 (교사용)
+            전북과학고 전자허가원 (교사용)
           </h1>
           <button
             onClick={() => router.push("/admin")}
@@ -348,7 +348,7 @@ export default function TeacherHome() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-zinc-900" />
           <h1 className="text-md font-bold tracking-tight text-zinc-900">
-            금마 전자허가원 (교사)
+            전북과학고 전자허가원 (교사)
           </h1>
         </div>
         <div className="flex items-center gap-3">

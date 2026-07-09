@@ -201,7 +201,7 @@ export default function AdminPage() {
       <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased justify-center items-center px-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center">
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900">금마 관리자 모드</h2>
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900">전북과학고 관리자 모드</h2>
             <p className="text-xs text-zinc-505 mt-1.5 font-semibold text-zinc-500">
               관리를 시작하려면 관리자 비밀번호를 입력하세요.
             </p>
@@ -262,7 +262,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-zinc-900" />
           <h1 className="text-md font-bold tracking-tight text-zinc-900">
-            금마 전자허가원 (관리자)
+            전북과학고 전자허가원 (관리자)
           </h1>
         </div>
         <div className="flex items-center gap-3">
