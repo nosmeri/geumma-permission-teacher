@@ -196,6 +196,15 @@ export default function TeacherHome() {
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
   };
 
+  const formatCreatedAt = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const month = d.getMonth() + 1;
+    const date = d.getDate();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${month}월 ${date}일 ${hours}:${minutes}`;
+  };
+
   const filteredPermits = permits.filter((p) => {
     if (filter === "ALL") return true;
     return p.status === filter;
@@ -469,6 +478,10 @@ export default function TeacherHome() {
                     </div>
 
                     <div className="space-y-1.5 text-xs">
+                      <div className="flex gap-4">
+                        <span className="text-zinc-400 w-14 shrink-0 font-semibold">신청 시각</span>
+                        <span className="text-zinc-700 font-medium">{formatCreatedAt(permit.createdAt)}</span>
+                      </div>
                       <div className="flex gap-4">
                         <span className="text-zinc-400 w-14 shrink-0 font-semibold">학생 목록</span>
                         <span className="text-zinc-700 break-all font-medium">{applicantsList}</span>

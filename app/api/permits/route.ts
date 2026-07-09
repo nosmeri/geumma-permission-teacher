@@ -25,8 +25,20 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch all permits, newest first
+    // Get the start of today in KST (UTC+9)
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstTime = new Date(now.getTime() + kstOffset);
+    kstTime.setUTCHours(0, 0, 0, 0);
+    const kstTodayStart = new Date(kstTime.getTime() - kstOffset);
+
+    // Fetch permits submitted today, newest first
     const permits = await prisma.permit.findMany({
+      where: {
+        createdAt: {
+          gte: kstTodayStart,
+        },
+      },
       include: {
         approver: {
           select: {
