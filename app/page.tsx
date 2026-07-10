@@ -45,6 +45,20 @@ export default function TeacherHome() {
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("PENDING");
+  const [viewMode, setViewMode] = useState<"LIST" | "LOCATION">("LIST");
+
+  // Load view mode from localStorage on mount
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem("teacher_view_mode");
+    if (savedViewMode === "LIST" || savedViewMode === "LOCATION") {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  const handleSetViewMode = (mode: "LIST" | "LOCATION") => {
+    setViewMode(mode);
+    localStorage.setItem("teacher_view_mode", mode);
+  };
 
   // Check registration on mount
   useEffect(() => {
@@ -209,6 +223,102 @@ export default function TeacherHome() {
     if (filter === "ALL") return true;
     return p.status === filter;
   });
+
+  // Group permits by location
+  const groupPermitsByLocation = (permitsList: Permit[]) => {
+    const groups: Record<string, Permit[]> = {};
+    permitsList.forEach((permit) => {
+      const loc = permit.location || "미지정";
+      if (!groups[loc]) {
+        groups[loc] = [];
+      }
+      groups[loc].push(permit);
+    });
+    return groups;
+  };
+
+  const groupedPermits = groupPermitsByLocation(filteredPermits);
+  const sortedLocations = Object.keys(groupedPermits).sort((a, b) => a.localeCompare(b));
+
+  const renderPermitCard = (permit: Permit) => {
+    const applicantsList = Array.isArray(permit.applicants)
+      ? permit.applicants.map((a) => `${a.id} ${a.name}`).join(", ")
+      : "";
+
+    return (
+      <div
+        key={permit.id}
+        className="p-5 rounded-2xl border border-zinc-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-5 hover:border-zinc-300 transition-all duration-300 shadow-sm hover:shadow"
+      >
+        <div className="space-y-3 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-zinc-400">
+              {formatPermitDate(permit.date)}
+            </span>
+            <span className="text-xs text-zinc-300 font-bold select-none">•</span>
+            <span className="text-sm font-bold text-zinc-800">
+              {permit.location}
+            </span>
+            <span className="text-xs text-zinc-300 font-bold select-none">•</span>
+            <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">
+              {permit.periods.join(", ")}
+            </span>
+          </div>
+
+          <div className="space-y-1.5 text-xs">
+            <div className="flex gap-4">
+              <span className="text-zinc-400 w-14 shrink-0 font-semibold">신청 시각</span>
+              <span className="text-zinc-700 font-medium">{formatCreatedAt(permit.createdAt)}</span>
+            </div>
+            <div className="flex gap-4">
+              <span className="text-zinc-400 w-14 shrink-0 font-semibold">학생 목록</span>
+              <span className="text-zinc-700 break-all font-medium">{applicantsList}</span>
+            </div>
+            <div className="flex gap-4">
+              <span className="text-zinc-400 w-14 shrink-0 font-semibold">이동 사유</span>
+              <span className="text-zinc-700 font-medium leading-relaxed">{permit.reason}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex sm:flex-col items-center justify-end gap-2.5 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+          {permit.status === "PENDING" ? (
+            <>
+              <button
+                onClick={() => handlePermitAction(permit.id, "APPROVE")}
+                className="h-10 px-5 bg-zinc-900 hover:bg-black text-white font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full sm:w-24"
+              >
+                승인
+              </button>
+              <button
+                onClick={() => handlePermitAction(permit.id, "REJECT")}
+                className="h-10 px-5 bg-rose-50 hover:bg-rose-100/60 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full sm:w-24"
+              >
+                반려
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center sm:items-end gap-1.5 w-full sm:w-auto">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  permit.status === "APPROVED"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-rose-50 text-rose-700 border border-rose-200"
+                }`}
+              >
+                {permit.status === "APPROVED" ? "승인됨" : "반려됨"}
+              </span>
+              {permit.approver && (
+                <span className="text-[10px] text-zinc-400 font-medium">
+                  승인: {permit.approver.name}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Render LOADING screen
   if (verificationStatus === "LOADING") {
@@ -415,6 +525,43 @@ export default function TeacherHome() {
           ))}
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">보기 설정 (View Mode)</span>
+            <p className="text-xs text-zinc-500 font-medium">허가원을 전체 목록 또는 장소별로 모아서 볼 수 있습니다.</p>
+          </div>
+          <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200 w-full sm:w-auto shrink-0">
+            <button
+              onClick={() => handleSetViewMode("LIST")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "LIST"
+                  ? "bg-zinc-900 text-white shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-3.75 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+              </svg>
+              전체 목록 보기
+            </button>
+            <button
+              onClick={() => handleSetViewMode("LOCATION")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "LOCATION"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              </svg>
+              장소별 모아보기
+            </button>
+          </div>
+        </div>
+
         {/* Dashboard Error */}
         {dashboardError && (
           <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-medium">
@@ -450,87 +597,38 @@ export default function TeacherHome() {
             </svg>
             <p className="text-xs text-zinc-550 font-medium">조회된 허가원 신청이 없습니다.</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredPermits.map((permit) => {
-              const applicantsList = Array.isArray(permit.applicants)
-                ? permit.applicants.map((a) => `${a.id} ${a.name}`).join(", ")
-                : "";
-
+        ) : viewMode === "LOCATION" ? (
+          <div className="space-y-8">
+            {sortedLocations.map((locationName) => {
+              const locationPermits = groupedPermits[locationName];
               return (
-                <div
-                  key={permit.id}
-                  className="p-5 rounded-2xl border border-zinc-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-5 hover:border-zinc-300 transition-all duration-300"
-                >
-                  <div className="space-y-3 flex-1">
+                <div key={locationName} className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-zinc-400">
-                        {formatPermitDate(permit.date)}
-                      </span>
-                      <span className="text-xs text-zinc-200">•</span>
-                      <span className="text-sm font-bold text-zinc-805">
-                        {permit.location}
-                      </span>
-                      <span className="text-xs text-zinc-200">•</span>
-                      <span className="text-xs font-semibold text-zinc-500">
-                        {permit.periods.join(", ")}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex gap-4">
-                        <span className="text-zinc-400 w-14 shrink-0 font-semibold">신청 시각</span>
-                        <span className="text-zinc-700 font-medium">{formatCreatedAt(permit.createdAt)}</span>
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                        </svg>
                       </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-400 w-14 shrink-0 font-semibold">학생 목록</span>
-                        <span className="text-zinc-700 break-all font-medium">{applicantsList}</span>
-                      </div>
-                      <div className="flex gap-4">
-                        <span className="text-zinc-400 w-14 shrink-0 font-semibold">이동 사유</span>
-                        <span className="text-zinc-700 font-medium leading-relaxed">{permit.reason}</span>
-                      </div>
+                      <h3 className="font-bold text-sm text-zinc-800">
+                        {locationName}
+                      </h3>
+                      <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {locationPermits.length}건
+                      </span>
                     </div>
                   </div>
-
-                  <div className="flex sm:flex-col items-center justify-end gap-2.5 shrink-0">
-                    {permit.status === "PENDING" ? (
-                      <>
-                        <button
-                          onClick={() => handlePermitAction(permit.id, "APPROVE")}
-                          className="h-10 px-5 bg-zinc-900 hover:bg-black text-white font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full"
-                        >
-                          승인
-                        </button>
-                        <button
-                          onClick={() => handlePermitAction(permit.id, "REJECT")}
-                          className="h-10 px-5 bg-rose-50 hover:bg-rose-100/60 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full"
-                        >
-                          반려
-                        </button>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                            permit.status === "APPROVED"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-rose-50 text-rose-700 border border-rose-200"
-                          }`}
-                        >
-                          {permit.status === "APPROVED" ? "승인됨" : "반려됨"}
-                        </span>
-                        {permit.approver && (
-                          <span className="text-[10px] text-zinc-400 font-medium">
-                            승인: {permit.approver.name}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="space-y-4 pl-3 border-l-2 border-indigo-100/70">
+                    {locationPermits.map((permit) => renderPermitCard(permit))}
                   </div>
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredPermits.map((permit) => renderPermitCard(permit))}
           </div>
         )}
       </main>
