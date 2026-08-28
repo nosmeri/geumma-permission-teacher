@@ -297,22 +297,65 @@ export default function TeacherHome() {
                 반려
               </button>
             </>
-          ) : (
+          ) : permit.status === "APPROVED" ? (
             <div className="flex flex-col items-center sm:items-end gap-1.5 w-full sm:w-auto">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                  permit.status === "APPROVED"
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-rose-50 text-rose-700 border border-rose-200"
-                }`}
-              >
-                {permit.status === "APPROVED" ? "승인됨" : "반려됨"}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                승인됨
               </span>
               {permit.approver && (
                 <span className="text-[10px] text-zinc-400 font-medium">
                   승인: {permit.approver.name}
                 </span>
               )}
+              <button
+                onClick={() => handlePermitAction(permit.id, "REJECT")}
+                className="h-8 px-3 mt-1 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-rose-200 hover:border-rose-300 font-semibold text-[11px] rounded-lg flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer w-full sm:w-auto shadow-2xs"
+                title="승인을 취소하고 반려 상태로 변경합니다"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-3.5 h-3.5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                반려로 변경
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center sm:items-end gap-1.5 w-full sm:w-auto">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                반려됨
+              </span>
+              {permit.approver && (
+                <span className="text-[10px] text-zinc-400 font-medium">
+                  처리: {permit.approver.name}
+                </span>
+              )}
+              <button
+                onClick={() => handlePermitAction(permit.id, "APPROVE")}
+                className="h-8 px-3 mt-1 bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 font-semibold text-[11px] rounded-lg flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer w-full sm:w-auto shadow-2xs"
+                title="반려된 허가원을 다시 승인합니다"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-3.5 h-3.5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                다시 승인
+              </button>
             </div>
           )}
         </div>
