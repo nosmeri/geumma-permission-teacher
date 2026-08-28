@@ -47,6 +47,26 @@ export default function TeacherHome() {
   const [filter, setFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("PENDING");
   const [viewMode, setViewMode] = useState<"LIST" | "LOCATION">("LIST");
 
+  // Edit Modal States
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [editingPermit, setEditingPermit] = useState<Permit | null>(null);
+  const [editPeriods, setEditPeriods] = useState<string[]>([]);
+  const [editLocation, setEditLocation] = useState<string>("");
+  const [editReason, setEditReason] = useState<string>("");
+  const [editApplicants, setEditApplicants] = useState<{ id: string; name: string }[]>([]);
+  const [savingEdit, setSavingEdit] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Fetch locations list on mount
+  useEffect(() => {
+    fetch("/api/locations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setLocations(data);
+      })
+      .catch((err) => console.error("Failed to load locations:", err));
+  }, []);
+
   // Load view mode from localStorage on mount
   useEffect(() => {
     const savedViewMode = localStorage.getItem("teacher_view_mode");
@@ -205,6 +225,122 @@ export default function TeacherHome() {
     }
   };
 
+  // Open Edit Modal
+  const handleOpenEditModal = (permit: Permit) => {
+    setEditingPermit(permit);
+    setEditPeriods([...permit.periods]);
+    setEditLocation(permit.location);
+    setEditReason(permit.reason);
+    const apps = Array.isArray(permit.applicants)
+      ? permit.applicants.map((a) => ({ id: a.id, name: a.name }))
+      : [{ id: "", name: "" }];
+    setEditApplicants(apps.length > 0 ? apps : [{ id: "", name: "" }]);
+    setEditError(null);
+  };
+
+  // Close Edit Modal
+  const handleCloseEditModal = () => {
+    if (savingEdit) return;
+    setEditingPermit(null);
+    setEditError(null);
+  };
+
+  // Toggle period in edit form
+  const toggleEditPeriod = (period: string) => {
+    if (editPeriods.includes(period)) {
+      setEditPeriods(editPeriods.filter((p) => p !== period));
+    } else {
+      setEditPeriods([...editPeriods, period]);
+    }
+  };
+
+  // Applicant row change in edit form
+  const handleEditApplicantChange = (index: number, field: "id" | "name", value: string) => {
+    const updated = [...editApplicants];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditApplicants(updated);
+  };
+
+  // Add applicant row in edit form
+  const handleAddEditApplicantRow = () => {
+    setEditApplicants([...editApplicants, { id: "", name: "" }]);
+  };
+
+  // Remove applicant row in edit form
+  const handleRemoveEditApplicantRow = (index: number) => {
+    if (editApplicants.length <= 1) return;
+    setEditApplicants(editApplicants.filter((_, i) => i !== index));
+  };
+
+  // Submit edit form
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPermit || !token) return;
+    setEditError(null);
+
+    if (editPeriods.length === 0) {
+      setEditError("교시를 1개 이상 선택해 주세요.");
+      return;
+    }
+    if (!editLocation.trim()) {
+      setEditError("장소를 선택하거나 입력해 주세요.");
+      return;
+    }
+    if (!editReason.trim()) {
+      setEditError("이동 사유를 입력해 주세요.");
+      return;
+    }
+
+    const idRegex = /^\d{4}$/;
+    for (let i = 0; i < editApplicants.length; i++) {
+      const app = editApplicants[i];
+      if (!app.id || !idRegex.test(app.id)) {
+        setEditError(`${i + 1}번째 학생의 학번이 올바르지 않습니다. (4자리 숫자)`);
+        return;
+      }
+      if (!app.name.trim()) {
+        setEditError(`${i + 1}번째 학생의 이름을 입력해 주세요.`);
+        return;
+      }
+    }
+
+    setSavingEdit(true);
+
+    try {
+      const res = await fetch("/api/permits", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          permitId: editingPermit.id,
+          periods: editPeriods,
+          location: editLocation.trim(),
+          reason: editReason.trim(),
+          applicants: editApplicants,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEditError(data.error || "허가원 수정에 실패했습니다.");
+        return;
+      }
+
+      // Update state immediately
+      setPermits((prev) =>
+        prev.map((p) => (p.id === editingPermit.id ? { ...p, ...data } : p))
+      );
+
+      setEditingPermit(null);
+    } catch (error) {
+      console.error("Failed to edit permit:", error);
+      setEditError("서버와의 통신에 실패했습니다.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const formatPermitDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return `${d.getMonth() + 1}월 ${d.getDate()}일`;
@@ -242,122 +378,169 @@ export default function TeacherHome() {
 
   const renderPermitCard = (permit: Permit) => {
     const applicantsList = Array.isArray(permit.applicants)
-      ? permit.applicants.map((a) => `${a.id} ${a.name}`).join(", ")
-      : "";
+      ? permit.applicants
+      : [];
 
     return (
       <div
         key={permit.id}
-        className="p-5 rounded-2xl border border-zinc-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-5 hover:border-zinc-300 transition-all duration-300 shadow-sm hover:shadow"
+        className="p-5 rounded-2xl border border-zinc-200 bg-white space-y-4 hover:border-zinc-300 hover:shadow-xs transition-all duration-200"
       >
-        <div className="space-y-3 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-zinc-400">
-              {formatPermitDate(permit.date)}
-            </span>
-            <span className="text-xs text-zinc-300 font-bold select-none">•</span>
-            <span className="text-sm font-bold text-zinc-800">
-              {permit.location}
-            </span>
-            <span className="text-xs text-zinc-300 font-bold select-none">•</span>
-            <span className="text-xs font-semibold text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">
-              {permit.periods.join(", ")}
-            </span>
+        {/* Top Header: Location, Period Chips, and Status Badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold text-zinc-900 flex items-center gap-1">
+                📍 {permit.location}
+              </span>
+              <span className="text-xs text-zinc-300">|</span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {permit.periods.map((p) => (
+                  <span
+                    key={p}
+                    className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 text-[11px] font-semibold"
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-medium">
+              <span>{formatPermitDate(permit.date)}</span>
+              <span>•</span>
+              <span>신청 {formatCreatedAt(permit.createdAt)}</span>
+            </div>
           </div>
 
-          <div className="space-y-1.5 text-xs">
-            <div className="flex gap-4">
-              <span className="text-zinc-400 w-14 shrink-0 font-semibold">신청 시각</span>
-              <span className="text-zinc-700 font-medium">{formatCreatedAt(permit.createdAt)}</span>
-            </div>
-            <div className="flex gap-4">
-              <span className="text-zinc-400 w-14 shrink-0 font-semibold">학생 목록</span>
-              <span className="text-zinc-700 break-all font-medium">{applicantsList}</span>
-            </div>
-            <div className="flex gap-4">
-              <span className="text-zinc-400 w-14 shrink-0 font-semibold">이동 사유</span>
-              <span className="text-zinc-700 font-medium leading-relaxed">{permit.reason}</span>
-            </div>
+          {/* Top-Right Status Badge */}
+          {permit.status === "PENDING" ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              승인 대기
+            </span>
+          ) : permit.status === "APPROVED" ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-emerald-600">
+                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+              </svg>
+              승인 완료
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-rose-600">
+                <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clipRule="evenodd" />
+              </svg>
+              반려됨
+            </span>
+          )}
+        </div>
+
+        {/* Applicants List Chips */}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+            신청 학생 ({applicantsList.length}명)
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {applicantsList.map((app, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200 text-xs font-semibold text-zinc-800"
+              >
+                <span className="font-mono text-zinc-400 text-[11px] font-medium">
+                  {app.id}
+                </span>
+                <span>{app.name}</span>
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="flex sm:flex-col items-center justify-end gap-2.5 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-          {permit.status === "PENDING" ? (
-            <>
-              <button
-                onClick={() => handlePermitAction(permit.id, "APPROVE")}
-                className="h-10 px-5 bg-zinc-900 hover:bg-black text-white font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full sm:w-24"
-              >
-                승인
-              </button>
-              <button
-                onClick={() => handlePermitAction(permit.id, "REJECT")}
-                className="h-10 px-5 bg-rose-50 hover:bg-rose-100/60 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl flex items-center justify-center active:scale-[0.97] transition-all cursor-pointer w-full sm:w-24"
-              >
-                반려
-              </button>
-            </>
-          ) : permit.status === "APPROVED" ? (
-            <div className="flex flex-col items-center sm:items-end gap-1.5 w-full sm:w-auto">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                승인됨
+        {/* Movement Reason */}
+        <div className="space-y-1">
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+            이동 사유
+          </span>
+          <p className="text-xs text-zinc-700 font-medium bg-zinc-50/80 p-3 rounded-xl border border-zinc-100 leading-relaxed break-all">
+            {permit.reason}
+          </p>
+        </div>
+
+        {/* Card Footer: Approver info on left + Action Buttons on right */}
+        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-3 text-xs">
+          {/* Left info: Approver name if approved/rejected */}
+          <div className="flex items-center gap-1.5 text-zinc-500">
+            {permit.status !== "PENDING" && permit.approver ? (
+              <span className="text-[11px]">
+                <span className="text-zinc-400 font-medium">{permit.status === "APPROVED" ? "승인:" : "처리:"} </span>
+                <span className="text-zinc-800 font-bold">{permit.approver.name} 선생님</span>
+                <span className="text-zinc-400 ml-1">({permit.approver.subject})</span>
               </span>
-              {permit.approver && (
-                <span className="text-[10px] text-zinc-400 font-medium">
-                  승인: {permit.approver.name}
-                </span>
-              )}
+            ) : (
+              <span className="text-[11px] text-zinc-400 font-medium">교사 확인 대기 중</span>
+            )}
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-1.5 justify-end shrink-0">
+            {/* Edit Button */}
+            <button
+              onClick={() => handleOpenEditModal(permit)}
+              className="px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-100 text-zinc-700 hover:text-zinc-900 font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+              title="허가원 내용 수정"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-zinc-500">
+                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+              </svg>
+              <span>수정</span>
+            </button>
+
+            {/* Status-specific action buttons */}
+            {permit.status === "PENDING" ? (
+              <>
+                <button
+                  onClick={() => handlePermitAction(permit.id, "REJECT")}
+                  className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clipRule="evenodd" />
+                  </svg>
+                  <span>반려</span>
+                </button>
+                <button
+                  onClick={() => handlePermitAction(permit.id, "APPROVE")}
+                  className="px-4 py-1.5 rounded-xl bg-zinc-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-white">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                  </svg>
+                  <span>승인</span>
+                </button>
+              </>
+            ) : permit.status === "APPROVED" ? (
               <button
                 onClick={() => handlePermitAction(permit.id, "REJECT")}
-                className="h-8 px-3 mt-1 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border border-rose-200 hover:border-rose-300 font-semibold text-[11px] rounded-lg flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer w-full sm:w-auto shadow-2xs"
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
                 title="승인을 취소하고 반려 상태로 변경합니다"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-3.5 h-3.5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z"
-                    clipRule="evenodd"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clipRule="evenodd" />
                 </svg>
-                반려로 변경
+                <span>반려로 변경</span>
               </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center sm:items-end gap-1.5 w-full sm:w-auto">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                반려됨
-              </span>
-              {permit.approver && (
-                <span className="text-[10px] text-zinc-400 font-medium">
-                  처리: {permit.approver.name}
-                </span>
-              )}
+            ) : (
               <button
                 onClick={() => handlePermitAction(permit.id, "APPROVE")}
-                className="h-8 px-3 mt-1 bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 font-semibold text-[11px] rounded-lg flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer w-full sm:w-auto shadow-2xs"
+                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
                 title="반려된 허가원을 다시 승인합니다"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-3.5 h-3.5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                    clipRule="evenodd"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
                 </svg>
-                다시 승인
+                <span>다시 승인</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     );
@@ -680,6 +863,212 @@ export default function TeacherHome() {
         ) : (
           <div className="space-y-4">
             {filteredPermits.map((permit) => renderPermitCard(permit))}
+          </div>
+        )}
+
+        {/* Edit Permit Modal */}
+        {editingPermit && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={handleCloseEditModal}
+          >
+            <div
+              className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-zinc-200/80 flex items-center justify-center text-zinc-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">허가원 내용 수정</h3>
+                    <p className="text-[11px] text-zinc-500 font-medium">
+                      {formatPermitDate(editingPermit.date)} 신청 내역
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseEditModal}
+                  disabled={savingEdit}
+                  className="w-8 h-8 rounded-xl hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Form */}
+              <form onSubmit={handleSaveEdit} className="p-5 space-y-4 overflow-y-auto flex-1">
+                {editError && (
+                  <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-medium">
+                    {editError}
+                  </div>
+                )}
+
+                {/* 1. 교시 선택 */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                    1. 교시 선택
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {["야자 1교시", "야자 2교시"].map((p) => {
+                      const isSelected = editPeriods.includes(p);
+                      return (
+                        <button
+                          type="button"
+                          key={p}
+                          onClick={() => toggleEditPeriod(p)}
+                          className={`h-10 rounded-xl border font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-zinc-900 bg-zinc-900 text-white"
+                              : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
+                          }`}
+                        >
+                          {p}
+                          {isSelected && (
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-white">
+                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. 장소 선택 */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                    2. 장소 선택
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      className="w-full h-10 px-3.5 rounded-xl border border-zinc-200 bg-white text-zinc-800 focus:outline-none focus:border-zinc-900 transition-colors text-xs appearance-none cursor-pointer"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`,
+                        backgroundPosition: "right 0.85rem center",
+                        backgroundSize: "1.2rem",
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    >
+                      <option value="" disabled>장소를 선택하세요</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name}
+                        </option>
+                      ))}
+                      {editLocation && !locations.some((l) => l.name === editLocation) && (
+                        <option value={editLocation}>{editLocation}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. 이동 사유 */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                    3. 이동 사유
+                  </label>
+                  <textarea
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="이동 사유를 입력하세요"
+                    className="w-full min-h-[70px] p-3 rounded-xl border border-zinc-200 bg-white text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors text-xs resize-none leading-relaxed"
+                  />
+                </div>
+
+                {/* 4. 신청 학생 목록 */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                      4. 신청 학생 ({editApplicants.length}명)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddEditApplicantRow}
+                      className="text-xs font-bold text-zinc-800 hover:text-black flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                      </svg>
+                      학생 추가
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {editApplicants.map((app, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          pattern="\d*"
+                          maxLength={4}
+                          placeholder="학번 (4자리)"
+                          value={app.id}
+                          onChange={(e) => handleEditApplicantChange(index, "id", e.target.value)}
+                          className="w-24 h-10 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs text-center font-mono focus:outline-none focus:border-zinc-900 transition-colors"
+                        />
+                        <input
+                          type="text"
+                          placeholder="이름"
+                          value={app.name}
+                          onChange={(e) => handleEditApplicantChange(index, "name", e.target.value)}
+                          className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs focus:outline-none focus:border-zinc-900 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEditApplicantRow(index)}
+                          disabled={editApplicants.length <= 1}
+                          className={`w-10 h-10 flex items-center justify-center rounded-xl border border-zinc-200 transition-colors ${
+                            editApplicants.length <= 1
+                              ? "opacity-30 cursor-not-allowed bg-zinc-50 text-zinc-300"
+                              : "bg-zinc-50 text-zinc-500 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50/30 cursor-pointer"
+                          }`}
+                          title="삭제"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM7.5 3.75A1.25 1.25 0 0 1 8.75 2.5h2.5A1.25 1.25 0 0 1 12.5 3.75v.404c-.833-.035-1.67-.054-2.5-.054s-1.667.019-2.5.054V3.75Zm5.624 2.017-1.127 12.395A1.25 1.25 0 0 1 12.403 17.5H7.597a1.25 1.25 0 0 1-1.246-1.138L5.224 5.767c1.72-.258 3.486-.39 5.276-.39s3.556.132 5.276.39Z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Modal Footer Buttons */}
+                <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseEditModal}
+                    disabled={savingEdit}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit}
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-black text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {savingEdit ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>저장 중...</span>
+                      </>
+                    ) : (
+                      "수정 완료"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>
