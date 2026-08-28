@@ -258,23 +258,25 @@ export default function AdminPage() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-900" />
-          <h1 className="text-md font-bold tracking-tight text-zinc-900">
-            전북과학고 전자허가원 (관리자)
+      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-2 backdrop-blur-md">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="w-2 h-2 rounded-full bg-zinc-900 shrink-0" />
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 whitespace-nowrap flex items-center gap-1.5">
+            <span className="hidden sm:inline">전북과학고 </span><span>전자허가원</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">관리자</span>
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={() => router.push("/")}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-205 text-zinc-650 border border-zinc-200 transition-all cursor-pointer"
+            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
-            교사 대시보드로
+            <span className="hidden sm:inline">교사 대시보드로</span>
+            <span className="sm:hidden">교사용</span>
           </button>
           <button
             onClick={handleLogout}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100/60 text-rose-700 border border-rose-200 transition-all cursor-pointer"
+            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
             로그아웃
           </button>

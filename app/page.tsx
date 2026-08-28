@@ -377,15 +377,20 @@ export default function TeacherHome() {
   if (verificationStatus === "NOT_REGISTERED" || verificationStatus === "REJECTED") {
     return (
       <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased">
-        <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-zinc-900">
-            전북과학고 전자허가원 (교사용)
-          </h1>
+        <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-2 backdrop-blur-md">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="w-2 h-2 rounded-full bg-zinc-900 shrink-0" />
+            <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 whitespace-nowrap flex items-center gap-1.5">
+              <span className="hidden sm:inline">전북과학고 </span><span>전자허가원</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded-md">교사용</span>
+            </h1>
+          </div>
           <button
             onClick={() => router.push("/admin")}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border border-zinc-200 transition-colors cursor-pointer"
+            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
           >
-            관리자 모드
+            <span className="hidden sm:inline">관리자 모드</span>
+            <span className="sm:hidden">관리자</span>
           </button>
         </header>
 
@@ -497,22 +502,25 @@ export default function TeacherHome() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-zinc-900" />
-          <h1 className="text-md font-bold tracking-tight text-zinc-900">
-            전북과학고 전자허가원 (교사)
+      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-2 backdrop-blur-md">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="w-2 h-2 rounded-full bg-zinc-900 shrink-0" />
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 whitespace-nowrap flex items-center gap-1.5">
+            <span className="hidden sm:inline">전북과학고 </span><span>전자허가원</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded-md">교사용</span>
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-zinc-500">
-            <span className="font-bold text-zinc-800">{teacher?.name}</span> ({teacher?.subject})
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-zinc-600 whitespace-nowrap">
+            <span className="font-bold text-zinc-900">{teacher?.name}</span>
+            <span className="text-zinc-400 font-normal ml-0.5">({teacher?.subject})</span>
           </span>
           <button
             onClick={() => router.push("/admin")}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-900 border border-zinc-200 transition-all cursor-pointer"
+            className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-900 border border-zinc-200 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
-            관리 메뉴
+            <span className="hidden sm:inline">관리 메뉴</span>
+            <span className="sm:hidden">관리</span>
           </button>
         </div>
       </header>
