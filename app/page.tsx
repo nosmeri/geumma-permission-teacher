@@ -685,7 +685,7 @@ export default function TeacherHome() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 text-zinc-900 font-sans antialiased selection:bg-zinc-900 selection:text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-2 backdrop-blur-md">
+      <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-2 backdrop-blur-md">
         <div className="flex items-center gap-2 shrink-0">
           <span className="w-2 h-2 rounded-full bg-zinc-900 shrink-0" />
           <h1 className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 whitespace-nowrap flex items-center gap-1.5">
@@ -865,46 +865,48 @@ export default function TeacherHome() {
             {filteredPermits.map((permit) => renderPermitCard(permit))}
           </div>
         )}
+      </main>
 
-        {/* Edit Permit Modal */}
-        {editingPermit && (
+      {/* Edit Permit Modal */}
+      {editingPermit && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto"
+          onClick={handleCloseEditModal}
+        >
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
-            onClick={handleCloseEditModal}
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90dvh] my-auto animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-zinc-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="px-5 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/70">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-zinc-200/80 flex items-center justify-center text-zinc-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">허가원 내용 수정</h3>
-                    <p className="text-[11px] text-zinc-500 font-medium">
-                      {formatPermitDate(editingPermit.date)} 신청 내역
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCloseEditModal}
-                  disabled={savingEdit}
-                  className="w-8 h-8 rounded-xl hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
-                >
+            {/* Modal Header */}
+            <div className="shrink-0 px-5 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-zinc-200/80 flex items-center justify-center text-zinc-800">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                    <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                    <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                   </svg>
-                </button>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900">허가원 내용 수정</h3>
+                  <p className="text-[11px] text-zinc-500 font-medium">
+                    {formatPermitDate(editingPermit.date)} 신청 내역
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={handleCloseEditModal}
+                disabled={savingEdit}
+                className="w-8 h-8 rounded-xl hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                </svg>
+              </button>
+            </div>
 
-              {/* Modal Form */}
-              <form onSubmit={handleSaveEdit} className="p-5 space-y-4 overflow-y-auto flex-1">
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 space-y-4 overflow-y-auto flex-1">
                 {editError && (
                   <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-medium">
                     {editError}
@@ -986,7 +988,7 @@ export default function TeacherHome() {
                 </div>
 
                 {/* 4. 신청 학생 목록 */}
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                       4. 신청 학생 ({editApplicants.length}명)
@@ -1003,9 +1005,9 @@ export default function TeacherHome() {
                     </button>
                   </div>
 
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-2">
                     {editApplicants.map((app, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={index} className="flex items-center gap-2 w-full">
                         <input
                           type="text"
                           pattern="\d*"
@@ -1013,27 +1015,27 @@ export default function TeacherHome() {
                           placeholder="학번 (4자리)"
                           value={app.id}
                           onChange={(e) => handleEditApplicantChange(index, "id", e.target.value)}
-                          className="w-24 h-10 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs text-center font-mono focus:outline-none focus:border-zinc-900 transition-colors"
+                          className="w-24 shrink-0 h-10 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs text-center font-mono focus:outline-none focus:border-zinc-900 transition-colors"
                         />
                         <input
                           type="text"
                           placeholder="이름"
                           value={app.name}
                           onChange={(e) => handleEditApplicantChange(index, "name", e.target.value)}
-                          className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs focus:outline-none focus:border-zinc-900 transition-colors"
+                          className="flex-1 min-w-0 h-10 px-3 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-xs focus:outline-none focus:border-zinc-900 transition-colors"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveEditApplicantRow(index)}
                           disabled={editApplicants.length <= 1}
-                          className={`w-10 h-10 flex items-center justify-center rounded-xl border border-zinc-200 transition-colors ${
+                          className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-xl border border-zinc-200 transition-colors ${
                             editApplicants.length <= 1
                               ? "opacity-30 cursor-not-allowed bg-zinc-50 text-zinc-300"
-                              : "bg-zinc-50 text-zinc-500 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50/30 cursor-pointer"
+                              : "bg-zinc-50 text-zinc-500 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50/50 cursor-pointer"
                           }`}
                           title="삭제"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
                             <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM7.5 3.75A1.25 1.25 0 0 1 8.75 2.5h2.5A1.25 1.25 0 0 1 12.5 3.75v.404c-.833-.035-1.67-.054-2.5-.054s-1.667.019-2.5.054V3.75Zm5.624 2.017-1.127 12.395A1.25 1.25 0 0 1 12.403 17.5H7.597a1.25 1.25 0 0 1-1.246-1.138L5.224 5.767c1.72-.258 3.486-.39 5.276-.39s3.556.132 5.276.39Z" clipRule="evenodd" />
                           </svg>
                         </button>
@@ -1041,37 +1043,37 @@ export default function TeacherHome() {
                     ))}
                   </div>
                 </div>
+              </div>
 
-                {/* Modal Footer Buttons */}
-                <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCloseEditModal}
-                    disabled={savingEdit}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingEdit}
-                    className="px-5 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-black text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    {savingEdit ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>저장 중...</span>
-                      </>
-                    ) : (
-                      "수정 완료"
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Modal Footer Buttons */}
+              <div className="shrink-0 px-5 py-3.5 border-t border-zinc-100 bg-zinc-50/80 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  disabled={savingEdit}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-black text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs active:scale-[0.98]"
+                >
+                  {savingEdit ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>저장 중...</span>
+                    </>
+                  ) : (
+                    "수정 완료"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
