@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import PWAUpdateHandler from "@/components/PWAUpdateHandler";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,18 +30,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <PWAUpdateHandler />
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (${process.env.NODE_ENV === 'production'} && 'serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );
